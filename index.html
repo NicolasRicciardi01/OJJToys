@@ -46,6 +46,18 @@
       </div>
     </header>
 
+    <!-- Selector móvil de vistas (solo en smartphones y tablets) -->
+    <div class="mobile-tabs" id="mobile-tabs">
+      <button class="mobile-tab-btn active" id="tab-preview" data-view="preview">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        <span>Vista Previa</span>
+      </button>
+      <button class="mobile-tab-btn" id="tab-editor" data-view="editor">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>Ajustes & Filtros</span>
+      </button>
+    </div>
+
     <!-- Contenido principal: Visor central y Menú lateral -->
     <main class="main-content">
       <!-- Área del Canvas / Visor -->
@@ -106,11 +118,25 @@
         <div id="grid-status-pill" class="grid-status-pill hidden">
           Grilla: <span id="grid-status-val">32x32</span>
         </div>
+
+        <!-- Botón flotante para abrir ajustes en pantallas móviles -->
+        <button id="btn-mobile-open-editor" class="btn-mobile-float" title="Editar Ajustes y Filtros">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Abrir Ajustes</span>
+        </button>
       </section>
 
       <!-- Menú Lateral de Edición -->
-      <aside class="sidebar-panel">
+      <aside class="sidebar-panel" id="sidebar-panel">
         <div class="sidebar-scroll">
+
+          <!-- Barra de retorno móvil -->
+          <div class="mobile-sidebar-bar">
+            <button id="btn-mobile-back-preview" class="btn-ghost-sm mobile-back-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+              <span>Ver Resultado en Pantalla Completa</span>
+            </button>
+          </div>
 
           <!-- SECCIÓN 0: CARGAR IMAGEN -->
           <div class="control-card upload-primary-card">
@@ -259,6 +285,38 @@
                   <span class="palette-name">Color Original</span>
                   <span class="palette-desc">RGB de la imagen</span>
                 </button>
+
+                <!-- Color Único con Desvanecimiento -->
+                <button class="palette-card" data-palette="single-fade" id="palette-card-single-fade">
+                  <div class="palette-preview fade-preview" id="single-fade-preview">
+                    <span class="fade-preview-bar"></span>
+                  </div>
+                  <span class="palette-name">1 Color (Desvanecer)</span>
+                  <span class="palette-desc">Opaco en luz • Se desvanece</span>
+                </button>
+              </div>
+
+              <!-- Selector de Color Único con Desvanecimiento -->
+              <div id="single-fade-box" class="single-fade-box hidden">
+                <div class="single-fade-header">
+                  <label class="field-label" style="margin-bottom: 0;">Elige el Color:</label>
+                  <div class="color-picker-inline">
+                    <input type="color" id="single-color-picker" value="#00f2fe" class="single-color-input" title="Elegir color personalizado">
+                    <span id="single-color-hex" class="hex-badge">#00F2FE</span>
+                  </div>
+                </div>
+                <div class="quick-swatches-grid">
+                  <button type="button" class="swatch-btn active" data-color="#00f2fe" style="--swatch-color:#00f2fe;" title="Cian"></button>
+                  <button type="button" class="swatch-btn" data-color="#39ff14" style="--swatch-color:#39ff14;" title="Verde Lima"></button>
+                  <button type="button" class="swatch-btn" data-color="#ff007f" style="--swatch-color:#ff007f;" title="Magenta Neón"></button>
+                  <button type="button" class="swatch-btn" data-color="#ffe600" style="--swatch-color:#ffe600;" title="Amarillo"></button>
+                  <button type="button" class="swatch-btn" data-color="#ff5722" style="--swatch-color:#ff5722;" title="Naranja"></button>
+                  <button type="button" class="swatch-btn" data-color="#ffffff" style="--swatch-color:#ffffff;" title="Blanco"></button>
+                  <button type="button" class="swatch-btn" data-color="#a855f7" style="--swatch-color:#a855f7;" title="Púrpura"></button>
+                </div>
+                <p class="fade-note">
+                  ✨ Las celdas con más iluminación son <strong>opacas</strong> y se van <strong>desvaneciendo</strong> gradualmente hasta desaparecer en las zonas oscuras.
+                </p>
               </div>
 
               <!-- Invertir Colores -->

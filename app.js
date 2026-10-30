@@ -19,7 +19,8 @@ const state = {
   keepAspectRatio: true,
   
   // Visual settings
-  palette: 'bw', // 'bw', 'grayscale', 'gameboy', 'fluor', 'matrix', 'amber', 'original'
+  palette: 'bw', // 'bw', 'grayscale', 'gameboy', 'fluor', 'matrix', 'amber', 'original', 'single-fade'
+  singleColor: '#00f2fe',
   invertColors: false,
   fillMode: 'ascii', // 'gradual', 'ascii', 'circles'
   charset: '@%#*+=-:. ',
@@ -37,6 +38,14 @@ const state = {
   isDragging: false,
   dragStartX: 0,
   dragStartY: 0,
+
+  // Touch gesture state
+  isPinching: false,
+  initialPinchDistance: 0,
+  initialPinchZoom: 1,
+
+  // Mobile view state
+  mobileView: 'preview',
   
   // Grid Overlay timer
   gridFadeTimer: null
@@ -87,6 +96,10 @@ const PALETTES = {
   original: {
     name: 'Color Original',
     type: 'original'
+  },
+  'single-fade': {
+    name: '1 Color (Desvanecer)',
+    type: 'single-fade'
   }
 };
 
@@ -152,6 +165,8 @@ let cachedSamplingCtx = null;
 function init() {
   setupEventListeners();
   setupZoomAndPan();
+  setupMobileTabs();
+  setupSingleFadeColor();
   // We leave the dropzone visible by default so the user can easily upload their image.
 }
 
@@ -220,6 +235,16 @@ function setupEventListeners() {
       document.querySelectorAll('.palette-card').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       state.palette = btn.dataset.palette;
+
+      const singleFadeBox = document.getElementById('single-fade-box');
+      if (singleFadeBox) {
+        if (state.palette === 'single-fade') {
+          singleFadeBox.classList.remove('hidden');
+        } else {
+          singleFadeBox.classList.add('hidden');
+        }
+      }
+
       renderMainArt();
     });
   });
@@ -671,6 +696,17 @@ function getPaletteColor(luminance, r, g, b, alpha) {
     return `rgba(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)}, ${alpha / 255})`;
   }
 
+  if (pal.type === 'single-fade') {
+    const c = hexToRgb(state.singleColor || '#00f2fe');
+    // Máxima iluminación -> opaco (alpha = 1.0)
+    // Menor iluminación -> se desvanece hasta desaparecer (alpha = 0.0)
+    const fadeAlpha = Math.max(0, Math.min(1, luminance)) * (alpha / 255);
+    if (fadeAlpha <= 0.003) {
+      return 'transparent';
+    }
+    return `rgba(${c.r}, ${c.g}, ${c.b}, ${fadeAlpha.toFixed(3)})`;
+  }
+
   if (pal.type === 'threshold') {
     // Blanco y Vacío: blanco si supera umbral (o brillo), o transparente
     return luminance > 0.35 ? '#ffffff' : 'transparent';
@@ -774,6 +810,7 @@ function setupZoomAndPan() {
     setZoom(state.zoom * delta);
   }, { passive: false });
 
+  // Mouse drag & pan
   wrapper.addEventListener('mousedown', (e) => {
     if (e.button !== 0) return;
     state.isDragging = true;
@@ -790,6 +827,51 @@ function setupZoomAndPan() {
 
   window.addEventListener('mouseup', () => {
     state.isDragging = false;
+  });
+
+  // Touch support for mobile / tablets (Pan with 1 finger, Pinch-to-zoom with 2 fingers)
+  let initialTouchDist = 0;
+  let initialTouchZoom = 1;
+
+  wrapper.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+      state.isDragging = true;
+      state.dragStartX = e.touches[0].clientX - state.panX;
+      state.dragStartY = e.touches[0].clientY - state.panY;
+    } else if (e.touches.length === 2) {
+      state.isDragging = false;
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      initialTouchDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      initialTouchZoom = state.zoom;
+    }
+  }, { passive: true });
+
+  window.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 1 && state.isDragging) {
+      state.panX = e.touches[0].clientX - state.dragStartX;
+      state.panY = e.touches[0].clientY - state.dragStartY;
+      applyTransform();
+    } else if (e.touches.length === 2 && initialTouchDist > 0) {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const currentDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      if (currentDist > 10) {
+        const factor = currentDist / initialTouchDist;
+        setZoom(initialTouchZoom * factor);
+      }
+    }
+  }, { passive: true });
+
+  window.addEventListener('touchend', (e) => {
+    if (e.touches.length === 0) {
+      state.isDragging = false;
+      initialTouchDist = 0;
+    } else if (e.touches.length === 1) {
+      state.dragStartX = e.touches[0].clientX - state.panX;
+      state.dragStartY = e.touches[0].clientY - state.panY;
+      state.isDragging = true;
+    }
   });
 
   // Zoom toolbar buttons
@@ -817,9 +899,11 @@ function fitCanvasToViewport() {
   if (!state.imageWidth || !state.imageHeight) return;
 
   const vp = document.getElementById('viewport-container');
-  const padding = 60;
-  const availW = vp.clientWidth - padding;
-  const availH = vp.clientHeight - padding;
+  if (!vp || vp.clientWidth === 0 || vp.clientHeight === 0) return;
+
+  const padding = Math.min(48, Math.max(16, vp.clientWidth * 0.08));
+  const availW = Math.max(50, vp.clientWidth - padding);
+  const availH = Math.max(50, vp.clientHeight - padding);
 
   const scaleW = availW / state.imageWidth;
   const scaleH = availH / state.imageHeight;
@@ -834,6 +918,90 @@ function fitCanvasToViewport() {
 
 function applyTransform() {
   canvasStage.style.transform = `translate(${state.panX}px, ${state.panY}px) scale(${state.zoom})`;
+}
+
+/**
+ * Setup Mobile Tabs & Responsive View Switcher
+ */
+function setupMobileTabs() {
+  const appLayout = document.querySelector('.app-layout');
+  const tabPreview = document.getElementById('tab-preview');
+  const tabEditor = document.getElementById('tab-editor');
+  const btnMobileOpenEditor = document.getElementById('btn-mobile-open-editor');
+  const btnMobileBackPreview = document.getElementById('btn-mobile-back-preview');
+
+  function switchView(view) {
+    state.mobileView = view;
+    if (appLayout) {
+      appLayout.setAttribute('data-mobile-view', view);
+    }
+
+    if (tabPreview && tabEditor) {
+      if (view === 'preview') {
+        tabPreview.classList.add('active');
+        tabEditor.classList.remove('active');
+        // Re-fit canvas when coming into view on mobile
+        setTimeout(() => fitCanvasToViewport(), 60);
+      } else {
+        tabPreview.classList.remove('active');
+        tabEditor.classList.add('active');
+      }
+    }
+  }
+
+  if (tabPreview) tabPreview.addEventListener('click', () => switchView('preview'));
+  if (tabEditor) tabEditor.addEventListener('click', () => switchView('editor'));
+  if (btnMobileOpenEditor) btnMobileOpenEditor.addEventListener('click', () => switchView('editor'));
+  if (btnMobileBackPreview) btnMobileBackPreview.addEventListener('click', () => switchView('preview'));
+
+  // Default mobile view on load
+  if (appLayout) {
+    appLayout.setAttribute('data-mobile-view', 'preview');
+  }
+}
+
+/**
+ * Setup Single Color Fade Customizer
+ */
+function setupSingleFadeColor() {
+  const singleColorPicker = document.getElementById('single-color-picker');
+  const singleColorHex = document.getElementById('single-color-hex');
+  const swatchBtns = document.querySelectorAll('.swatch-btn');
+
+  function applySingleColor(hex) {
+    state.singleColor = hex;
+    document.documentElement.style.setProperty('--single-fade-color', hex);
+    if (singleColorPicker) singleColorPicker.value = hex;
+    if (singleColorHex) singleColorHex.textContent = hex.toUpperCase();
+
+    // Mark active swatch
+    swatchBtns.forEach(btn => {
+      if (btn.dataset.color.toLowerCase() === hex.toLowerCase()) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+
+    if (state.palette === 'single-fade') {
+      renderMainArt();
+    }
+  }
+
+  if (singleColorPicker) {
+    singleColorPicker.addEventListener('input', (e) => {
+      applySingleColor(e.target.value);
+    });
+  }
+
+  swatchBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      applySingleColor(btn.dataset.color);
+    });
+  });
+
+  // Initialize CSS property
+  document.documentElement.style.setProperty('--single-fade-color', state.singleColor);
 }
 
 /**
