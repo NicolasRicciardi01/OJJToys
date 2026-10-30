@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editor de Imágenes Retro & ASCII</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+</head>
+
+<body>
+  <div class="app-layout">
+    <!-- Header / Barra superior -->
+    <header class="top-nav">
+      <div class="brand">
+        <div class="brand-icon">
+          <span>&gt;_</span>
+        </div>
+        <div class="brand-info">
+          <h1>Pixel <span>Filter</span></h1>
+          <p class="subtitle">Editor y conversor de imágenes a ASCII & Pixel Art</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <label class="btn-primary file-input-label nav-upload-btn" title="Subir una imagen desde tu equipo">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+          <span>Subir Imagen</span>
+          <input type="file" id="nav-image-input" accept="image/png, image/jpeg, image/jpg, image/webp" />
+        </label>
+        <span id="image-info-badge" class="badge hidden">0 x 0 px</span>
+        <button id="btn-reset-view" class="btn-ghost" title="Restablecer zoom y posición">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+          </svg>
+          Restablecer Vista
+        </button>
+      </div>
+    </header>
+
+    <!-- Contenido principal: Visor central y Menú lateral -->
+    <main class="main-content">
+      <!-- Área del Canvas / Visor -->
+      <section class="viewport-area" id="viewport-container">
+        <!-- Overlay de carga inicial / Dropzone -->
+        <div class="drop-zone" id="drop-zone">
+          <div class="drop-zone-content">
+            <div class="upload-icon-circle">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+            </div>
+            <h2>Arrastra y suelta tu imagen aquí</h2>
+            <p>Soporta formato JPG, PNG con transparencia (hasta 2K / 2048px)</p>
+            <div class="drop-actions-group">
+              <label class="btn-primary file-input-label btn-large">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                <span>Seleccionar Imagen desde tu PC</span>
+                <input type="file" id="image-input" accept="image/png, image/jpeg, image/jpg, image/webp" />
+              </label>
+              <button id="btn-load-demo" class="btn-ghost-sm" style="margin-top: 10px;">
+                O cargar imagen de prueba demo
+              </button>
+            </div>
+            <div class="drop-hints">
+              <span>Soporta transparencia PNG</span> &bull; <span>Descarga en resolución nativa</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contenedor del Canvas interactivo con Zoom y Pan -->
+        <div class="canvas-wrapper hidden" id="canvas-wrapper">
+          <div class="canvas-stage" id="canvas-stage">
+            <!-- Canvas de Fondo (Color o imagen subida) -->
+            <canvas id="bg-canvas"></canvas>
+            <!-- Canvas Principal Renderizado (ASCII / Pixeles / Círculos) -->
+            <canvas id="render-canvas"></canvas>
+            <!-- Canvas Grilla por encima (con desvanecimiento automático) -->
+            <canvas id="grid-canvas" class="grid-layer"></canvas>
+          </div>
+        </div>
+
+        <!-- Controles flotantes de Zoom en el visor -->
+        <div class="zoom-toolbar hidden" id="zoom-toolbar">
+          <button id="btn-zoom-out" class="icon-btn" title="Alejar">-</button>
+          <span id="zoom-level">100%</span>
+          <button id="btn-zoom-in" class="icon-btn" title="Acercar">+</button>
+          <button id="btn-zoom-fit" class="icon-btn" title="Ajustar a pantalla">⊡</button>
+        </div>
+
+        <!-- Indicador de estado de la grilla -->
+        <div id="grid-status-pill" class="grid-status-pill hidden">
+          Grilla: <span id="grid-status-val">32x32</span>
+        </div>
+      </section>
+
+      <!-- Menú Lateral de Edición -->
+      <aside class="sidebar-panel">
+        <div class="sidebar-scroll">
+
+          <!-- SECCIÓN 0: CARGAR IMAGEN -->
+          <div class="control-card upload-primary-card">
+            <div class="card-header">
+              <div class="card-title">
+                <span class="icon">📁</span>
+                <h3>Imagen</h3>
+              </div>
+              <span id="current-img-badge" class="badge">Sin imagen</span>
+            </div>
+            <div class="card-body">
+              <label class="btn-primary file-input-label btn-full" style="gap: 10px; padding: 12px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                <span id="sidebar-upload-btn-text">Subir Imagen (JPG/PNG)</span>
+                <input type="file" id="sidebar-image-input" accept="image/png, image/jpeg, image/jpg, image/webp" />
+              </label>
+              <p class="control-note" style="margin-top: 8px;">
+                Arrastra cualquier imagen aquí o haz clic para seleccionarla.
+              </p>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 1: RESOLUCIÓN Y GRILLA -->
+          <div class="control-card">
+            <div class="card-header">
+              <div class="card-title">
+                <span class="icon">⊞</span>
+                <h3>Tamaño de Grilla</h3>
+              </div>
+              <span class="value-chip" id="grid-val-display">32 × 32</span>
+            </div>
+            <div class="card-body">
+              <div class="slider-wrapper">
+                <input type="range" id="grid-slider" min="2" max="256" value="32" step="1" class="slider-range">
+                <div class="slider-ticks">
+                  <span>2</span>
+                  <span>64</span>
+                  <span>128</span>
+                  <span>192</span>
+                  <span>256</span>
+                </div>
+              </div>
+
+              <div class="grid-options-row">
+                <label class="checkbox-container">
+                  <input type="checkbox" id="aspect-ratio-toggle" checked>
+                  <span class="checkmark"></span>
+                  <span class="label-text">Mantener proporción de imagen</span>
+                </label>
+              </div>
+
+              <p class="control-note">
+                <span class="dot-live"></span> La grilla se muestra en tiempo real y se <strong>desvanece
+                  automáticamente tras 1 segundo</strong> de inactividad.
+              </p>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 2: GAMA DE COLORES -->
+          <div class="control-card">
+            <div class="card-header">
+              <div class="card-title">
+                <span class="icon">🎨</span>
+                <h3>Gama de Colores</h3>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="palette-grid">
+                <!-- Blanco y Vacío (Negro) -->
+                <button class="palette-card active" data-palette="bw">
+                  <div class="palette-preview">
+                    <span style="background: #ffffff;"></span>
+                    <span style="background: #111111;"></span>
+                  </div>
+                  <span class="palette-name">Blanco y Vacío</span>
+                  <span class="palette-desc">Monocromo puro</span>
+                </button>
+
+                <!-- Escala de Grises -->
+                <button class="palette-card" data-palette="grayscale">
+                  <div class="palette-preview">
+                    <span style="background: #ffffff;"></span>
+                    <span style="background: #aaaaaa;"></span>
+                    <span style="background: #555555;"></span>
+                    <span style="background: #111111;"></span>
+                  </div>
+                  <span class="palette-name">Escala de Grises</span>
+                  <span class="palette-desc">Degradado suave</span>
+                </button>
+
+                <!-- Game Boy -->
+                <button class="palette-card" data-palette="gameboy">
+                  <div class="palette-preview">
+                    <span style="background: #9bbc0f;"></span>
+                    <span style="background: #8bac0f;"></span>
+                    <span style="background: #306230;"></span>
+                    <span style="background: #0f380f;"></span>
+                  </div>
+                  <span class="palette-name">Game Boy</span>
+                  <span class="palette-desc">4 tonos verdosos retro</span>
+                </button>
+
+                <!-- Flúor / Neón -->
+                <button class="palette-card" data-palette="fluor">
+                  <div class="palette-preview">
+                    <span style="background: #00ffff;"></span>
+                    <span style="background: #ff007f;"></span>
+                    <span style="background: #39ff14;"></span>
+                    <span style="background: #ffe600;"></span>
+                  </div>
+                  <span class="palette-name">Flúor / Neón</span>
+                  <span class="palette-desc">Cyberpunk brillante</span>
+                </button>
+
+                <!-- Matrix -->
+                <button class="palette-card" data-palette="matrix">
+                  <div class="palette-preview">
+                    <span style="background: #5cff71;"></span>
+                    <span style="background: #00dd28;"></span>
+                    <span style="background: #007711;"></span>
+                    <span style="background: #051a08;"></span>
+                  </div>
+                  <span class="palette-name">Matrix Terminal</span>
+                  <span class="palette-desc">Verde fósforo hacker</span>
+                </button>
+
+                <!-- Ámbar CRT -->
+                <button class="palette-card" data-palette="amber">
+                  <div class="palette-preview">
+                    <span style="background: #ffbe33;"></span>
+                    <span style="background: #e68a00;"></span>
+                    <span style="background: #994c00;"></span>
+                    <span style="background: #1a0d00;"></span>
+                  </div>
+                  <span class="palette-name">Ámbar CRT</span>
+                  <span class="palette-desc">Monitor clásico vintage</span>
+                </button>
+
+                <!-- Color Original -->
+                <button class="palette-card" data-palette="original">
+                  <div class="palette-preview gradient-rgb"></div>
+                  <span class="palette-name">Color Original</span>
+                  <span class="palette-desc">RGB de la imagen</span>
+                </button>
+              </div>
+
+              <!-- Invertir Colores -->
+              <div class="options-toggle-group">
+                <label class="checkbox-container">
+                  <input type="checkbox" id="invert-colors-toggle">
+                  <span class="checkmark"></span>
+                  <span class="label-text">Invertir polaridad (Negativo)</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 3: OPCIONES DE RELLENO -->
+          <div class="control-card">
+            <div class="card-header">
+              <div class="card-title">
+                <span class="icon">▦</span>
+                <h3>Modo de Relleno</h3>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="fill-mode-selector">
+                <!-- 1. Relleno Gradual de Pixel -->
+                <button class="mode-btn" data-fill="gradual">
+                  <div class="mode-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="3" y="3" width="7" height="7" fill="currentColor" />
+                      <rect x="14" y="3" width="7" height="7" fill="currentColor" opacity="0.6" />
+                      <rect x="3" y="14" width="7" height="7" fill="currentColor" opacity="0.3" />
+                      <rect x="14" y="14" width="7" height="7" stroke-dasharray="2 2" />
+                    </svg>
+                  </div>
+                  <div class="mode-info">
+                    <strong>Relleno Gradual</strong>
+                    <span>Bloques escalonados por brillo</span>
+                  </div>
+                </button>
+
+                <!-- 2. Símbolos ASCII -->
+                <button class="mode-btn active" data-fill="ascii">
+                  <div class="mode-icon">
+                    <span class="ascii-icon">@#%</span>
+                  </div>
+                  <div class="mode-info">
+                    <strong>Símbolos ASCII</strong>
+                    <span>Caracteres clásicos tipográficos</span>
+                  </div>
+                </button>
+
+                <!-- 3. Círculos de Distintos Tamaños -->
+                <button class="mode-btn" data-fill="circles">
+                  <div class="mode-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="7" cy="7" r="4" fill="currentColor" />
+                      <circle cx="17" cy="7" r="2.5" fill="currentColor" />
+                      <circle cx="7" cy="17" r="1.5" fill="currentColor" />
+                      <circle cx="17" cy="17" r="0.5" fill="currentColor" />
+                    </svg>
+                  </div>
+                  <div class="mode-info">
+                    <strong>Círculos (Halftone)</strong>
+                    <span>Radios proporcionales a la luz</span>
+                  </div>
+                </button>
+              </div>
+
+              <!-- Sub-opciones para modo ASCII -->
+              <div class="sub-options" id="ascii-sub-options">
+                <label class="field-label">Juego de Caracteres:</label>
+                <select id="ascii-charset-select" class="select-input">
+                  <option value="standard">Estándar: @%#*+=-:. [Espacio]</option>
+                  <option value="blocks">Bloques: █▓▒░ [Espacio]</option>
+                  <option value="binary">Binario: 10 [Espacio]</option>
+                  <option value="simple">Minimalista: #*+. [Espacio]</option>
+                  <option value="detailed">Alta Densidad
+                    ($@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~&lt;&gt;i!lI;:,"^`'. )</option>
+                  <option value="custom">Personalizado...</option>
+                </select>
+
+                <div id="custom-charset-box" class="custom-charset-box hidden">
+                  <input type="text" id="custom-charset-input" value="@#*+=-:. "
+                    placeholder="De más oscuro a más claro..." class="text-input" />
+                  <span class="input-helper">Ordenados de mayor densidad a menor densidad</span>
+                </div>
+              </div>
+
+              <!-- Ajustes de brillo y contraste fino -->
+              <div class="sliders-row">
+                <div class="slider-field">
+                  <div class="slider-meta">
+                    <span>Brillo</span>
+                    <span id="brightness-val">0</span>
+                  </div>
+                  <input type="range" id="brightness-slider" min="-100" max="100" value="0" class="slider-range-sm">
+                </div>
+                <div class="slider-field">
+                  <div class="slider-meta">
+                    <span>Contraste</span>
+                    <span id="contrast-val">0</span>
+                  </div>
+                  <input type="range" id="contrast-slider" min="-100" max="100" value="0" class="slider-range-sm">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 4: FONDO Y TRANSPARENCIA PNG -->
+          <div class="control-card">
+            <div class="card-header">
+              <div class="card-title">
+                <span class="icon">🖼️</span>
+                <h3>Fondo & Transparencia</h3>
+              </div>
+              <span id="png-badge" class="tag-badge">Transparencia activa</span>
+            </div>
+            <div class="card-body">
+              <div class="bg-mode-row">
+                <label class="bg-option">
+                  <input type="radio" name="bg-type" value="transparent" checked>
+                  <span class="bg-option-box pattern-trans"></span>
+                  <span>Transparente</span>
+                </label>
+                <label class="bg-option">
+                  <input type="radio" name="bg-type" value="black">
+                  <span class="bg-option-box" style="background: #000000; border-color: #333;"></span>
+                  <span>Negro</span>
+                </label>
+                <label class="bg-option">
+                  <input type="radio" name="bg-type" value="white">
+                  <span class="bg-option-box" style="background: #ffffff;"></span>
+                  <span>Blanco</span>
+                </label>
+                <label class="bg-option">
+                  <input type="radio" name="bg-type" value="custom">
+                  <input type="color" id="bg-color-picker" value="#0f172a" class="bg-color-pick-input">
+                  <span>Color...</span>
+                </label>
+              </div>
+
+              <div class="custom-bg-image-section">
+                <label class="btn-secondary btn-full file-input-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                  </svg>
+                  <span id="bg-img-label-text">Subir Imagen de Fondo</span>
+                  <input type="file" id="bg-image-input" accept="image/png, image/jpeg, image/jpg, image/webp" />
+                </label>
+                <button id="btn-remove-bg-img" class="btn-danger-outline hidden">Quitar fondo subido</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 5: DESCARGA Y EXPORTACIÓN -->
+          <div class="control-card download-card">
+            <div class="card-header">
+              <div class="card-title">
+                <span class="icon">💾</span>
+                <h3>Exportar Resultado</h3>
+              </div>
+            </div>
+            <div class="card-body">
+              <p class="export-desc">
+                La imagen descargada mantendrá la <strong>resolución original exacta</strong> (<span
+                  id="export-dim-text">Original</span>) con todos los filtros y rellenos calculados con máxima nitidez.
+              </p>
+
+              <div class="export-options-grid">
+                <label class="radio-chip active">
+                  <input type="radio" name="export-format" value="png" checked>
+                  <span>PNG (Máxima fidelidad)</span>
+                </label>
+                <label class="radio-chip">
+                  <input type="radio" name="export-format" value="jpeg">
+                  <span>JPG (Comprimido)</span>
+                </label>
+              </div>
+
+              <button id="btn-download" class="btn-download-primary">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                <span>Descargar Imagen Procesada</span>
+              </button>
+
+              <div class="secondary-actions-row">
+                <button id="btn-copy-ascii" class="btn-ghost-sm" title="Copiar texto ASCII al portapapeles">
+                  📋 Copiar Texto ASCII
+                </button>
+                <label class="btn-ghost-sm file-input-label" title="Cargar otra imagen">
+                  🔄 Cambiar Imagen
+                  <input type="file" id="change-image-input" accept="image/png, image/jpeg, image/jpg, image/webp" />
+                </label>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </aside>
+    </main>
+
+    <!-- Notificación Toast -->
+    <div id="toast" class="toast">Mensaje</div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
